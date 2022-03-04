@@ -20,10 +20,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 RE_REMOVE_HTML_TAGS = re.compile('<.*?>')
 
 
-def get_selenium():
+def get_selenium(base_url):
     args = dict(
         download_directory=os.environ["LBRC_SELENIUM_DOWNLOAD_DIRECTORY"],
-        base_url=os.environ["LBRC_SELENIUM_BASE_URL"],
+        base_url=base_url,
         implicit_wait_time=float(os.environ.get("LBRC_SELENIUM_IMPLICIT_WAIT_TIME", 1.0)),
         click_wait_time=float(os.environ.get("LBRC_SELENIUM_CLICK_WAIT_TIME", 1)),
         download_wait_time=float(os.environ.get("LBRC_SELENIUM_DOWNLOAD_WAIT_TIME", 30)),
