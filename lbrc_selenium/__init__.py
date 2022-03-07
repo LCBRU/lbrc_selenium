@@ -70,6 +70,11 @@ class ClassSelector(Selector):
         super().__init__(query, By.CLASS_NAME)
 
 
+class IdSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.ID)
+
+
 # Helpers
 class SeleniumHelper:
     def __init__(
