@@ -43,20 +43,34 @@ def get_selenium(base_url):
         )
 
 
+# Selectors
 class Selector:
     def __init__(self, query, by):
         self.query = query
         self.by = by
 
+
 class CssSelector(Selector):
     def __init__(self, query):
         super().__init__(query, By.CSS_SELECTOR)
+
 
 class XpathSelector(Selector):
     def __init__(self, query):
         super().__init__(query, By.XPATH)
 
 
+class NameSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.NAME)
+
+
+class ClassSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.CLASS_NAME)
+
+
+# Helpers
 class SeleniumHelper:
     def __init__(
         self,
