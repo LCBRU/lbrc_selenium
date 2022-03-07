@@ -2,7 +2,6 @@ import os
 import zipfile
 import re
 import smtplib
-import tempfile
 import logging
 import base64
 from time import sleep
@@ -212,22 +211,17 @@ class SeleniumHelper:
         s.send_message(msg)
         s.quit()
 
-    def download_file(self):
-        download_file = tempfile.NamedTemporaryFile()
+    def download_file(self, filename):
+        # list all the completed remote files (waits for at least one)
+        files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
 
-        try:
-            # list all the completed remote files (waits for at least one)
-            files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
+        # get the content of the first file remotely
+        content = self.get_file_content(self.driver, files[0])
 
-            # get the content of the first file remotely
-            content = self.get_file_content(self.driver, files[0])
+        with open(filename, 'wb') as f:
+            f.write(content)
 
-            with open(download_file.name, 'wb') as f:
-                f.write(content)            
-
-            return download_file.name
-        finally:
-            logging.info("Test test_grid_download_files executed successfully")
+        logging.info("Test test_grid_download_files executed successfully")
 
     def get_downloaded_files(self, driver):
         if not driver.current_url.startswith("chrome://downloads"):
@@ -266,8 +260,6 @@ class SeleniumHelper:
 
         finally:
             logging.info("get_file_content executed successfully")
-
-
 
 
 class SeleniumGridHelper(SeleniumHelper):
