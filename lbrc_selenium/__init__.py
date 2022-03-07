@@ -2,6 +2,9 @@ import os
 import zipfile
 import re
 import smtplib
+import tempfile
+import logging
+import base64
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -134,7 +137,7 @@ class SeleniumHelper:
         except (NoSuchElementException, TimeoutException) as ex:
             if not allow_null:
                 raise ex
-    
+
     def get_elements(self, selector, element=None):
         return (element or self.driver).find_elements(selector.by, selector.query)
     
@@ -208,6 +211,63 @@ class SeleniumHelper:
         s = smtplib.SMTP('smtp.xuhl-tr.nhs.uk')
         s.send_message(msg)
         s.quit()
+
+    def download_file(self):
+        download_file = tempfile.NamedTemporaryFile()
+
+        try:
+            # list all the completed remote files (waits for at least one)
+            files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
+
+            # get the content of the first file remotely
+            content = self.get_file_content(self.driver, files[0])
+
+            with open(download_file.name, 'wb') as f:
+                f.write(content)            
+
+            return download_file.name
+        finally:
+            logging.info("Test test_grid_download_files executed successfully")
+
+    def get_downloaded_files(self, driver):
+        if not driver.current_url.startswith("chrome://downloads"):
+            driver.get("chrome://downloads/")
+
+        return driver.execute_script( \
+            "return  document.querySelector('downloads-manager')  "
+            " .shadowRoot.querySelector('#downloadsList')         "
+            " .items.filter(e => e.state === 'COMPLETE')          "
+            " .map(e => e.filePath || e.file_path || e.fileUrl || e.file_url); ")
+
+    def get_file_content(self, driver, path):
+        try:
+            elem = driver.execute_script( \
+                "var input = window.document.createElement('INPUT'); "
+                "input.setAttribute('type', 'file'); "
+                "input.hidden = true; "
+                "input.onchange = function (e) { e.stopPropagation() }; "
+                "return window.document.documentElement.appendChild(input); " )
+
+            elem._execute('sendKeysToElement', {'value': [ path ], 'text': path})
+
+            result = driver.execute_async_script( \
+                "var input = arguments[0], callback = arguments[1]; "
+                "var reader = new FileReader(); "
+                "reader.onload = function (ev) { callback(reader.result) }; "
+                "reader.onerror = function (ex) { callback(ex.message) }; "
+                "reader.readAsDataURL(input.files[0]); "
+                "input.remove(); "
+                , elem)
+
+            if not result.startswith('data:') :
+                raise Exception("Failed to get file content: %s" % result)
+
+            return base64.b64decode(result[result.find('base64,') + 7:])
+
+        finally:
+            logging.info("get_file_content executed successfully")
+
+
 
 
 class SeleniumGridHelper(SeleniumHelper):
