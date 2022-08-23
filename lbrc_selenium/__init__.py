@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import os
 import zipfile
 import re
@@ -21,7 +22,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 RE_REMOVE_HTML_TAGS = re.compile('<.*?>')
 
-
+@contextmanager
 def get_selenium(base_url):
     args = dict(
         download_directory=os.environ["LBRC_SELENIUM_DOWNLOAD_DIRECTORY"],
@@ -33,16 +34,21 @@ def get_selenium(base_url):
     )
 
     if os.environ.get("LBRC_SELENIUM_HOST", None):
-        return SeleniumGridHelper(
+        helper = SeleniumGridHelper(
             selenium_host=os.environ["LBRC_SELENIUM_HOST"],
             selenium_port=os.environ.get("LBRC_SELENIUM_PORT", '4444'),
             **args,
         )
     else:
-        return SeleniumLocalHelper(
+        helper = SeleniumLocalHelper(
             headless=os.environ.get("LBRC_SELENIUM_HEADLESS", False),
             **args,
         )
+
+    try:
+        yield helper
+    finally:
+        helper.close()
 
 
 # Selectors
@@ -174,7 +180,7 @@ class SeleniumHelper:
         return result
     
     def get_href(self, element):
-        return (element.get_attribute("href") or '').strip()
+        return (element.get_attribute("href") or '').strip()  
     
     def get_value(self, element):
         return self.normalise_text(element.get_attribute("value"))
@@ -200,7 +206,7 @@ class SeleniumHelper:
         part.set_payload(self.driver.get_screenshot_as_png())
         encode_base64(part)
 
-        part.add_header(
+        part.add_header(       
             'Content-Disposition',
             'attachment; filename="screenshot.png"',
         )
