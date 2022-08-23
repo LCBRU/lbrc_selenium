@@ -45,10 +45,7 @@ def get_selenium(base_url):
             **args,
         )
 
-    try:
-        yield helper
-    finally:
-        helper.close()
+    return helper
 
 
 # Selectors
