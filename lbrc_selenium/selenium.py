@@ -37,6 +37,10 @@ class XpathSelector(Selector):
     def __init__(self, query):
         super().__init__(query, By.XPATH)
 
+class TagSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.TAG_NAME)
+
 
 # Actions
 
