@@ -41,6 +41,20 @@ class TagSelector(Selector):
     def __init__(self, query):
         super().__init__(query, By.TAG_NAME)
 
+class NameSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.NAME)
+
+class ClassSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.CLASS_NAME)
+
+class IdSelector(Selector):
+    def __init__(self, query):
+        super().__init__(query, By.ID)
+
+    
+
 
 # Actions
 
