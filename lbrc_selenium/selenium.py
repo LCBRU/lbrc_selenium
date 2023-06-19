@@ -173,6 +173,11 @@ class SeleniumHelper:
         latest_version = max([k for k in versions.keys() if version.parse(k) < cv])
         return versions[latest_version]
         
+    def get_version_item(self, versions):
+        cv = version.parse(self.version)
+        latest_version = max([k for k in versions.keys() if version.parse(k) < cv])
+        return versions[latest_version]
+        
     def get(self, url):
         base = self.base_url
 
