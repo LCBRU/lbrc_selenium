@@ -170,13 +170,13 @@ class SeleniumHelper:
     
     def get_compare_version_item(self, versions):
         cv = version.parse(self.compare_version)
-        latest_version = max([k for k in versions.keys() if version.parse(k) < cv])
+        latest_version = max([k for k in versions.keys() if version.parse(k) <= cv])
         return versions[latest_version]
         
     def get_version_item(self, versions):
         cv = version.parse(self.version)
-        latest_version = max([k for k in versions.keys() if version.parse(k) < cv])
-        return versions[latest_version]
+        latest_version = max(map(version.parse, [k for k in versions.keys() if version.parse(k) <= cv]))
+        return versions[str(latest_version)]
         
     def get(self, url):
         base = self.base_url
@@ -250,10 +250,16 @@ class SeleniumHelper:
         return result
     
     def get_href(self, element):
-        return (element.get_attribute("href") or '').strip()
+        if element:
+            return (element.get_attribute("href") or '').strip()
+    
+    def get_name(self, element):
+        if element:
+            return (element.get_attribute("name") or '').strip()
     
     def get_value(self, element):
-        return self.normalise_text(element.get_attribute("value"))
+        if element:
+            return self.normalise_text(element.get_attribute("value"))
     
     def normalise_text(self, value):
         with_removed_tags = re.sub(RE_REMOVE_HTML_TAGS, '', (value or ''))
