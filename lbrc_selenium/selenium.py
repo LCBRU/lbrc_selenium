@@ -370,3 +370,20 @@ def get_selenium_local_helper(helper_class, download_directory, implicit_wait_ti
     )
 
 
+class VersionTranslator:
+    def __init__(self) -> None:
+        self.columns = {}
+        self.label_translations = {}
+        self.value_translations = {}
+
+    def add_column(self, version, column_name):
+        self.columns[version].append(column_name)
+
+    def add_label_translator(self, version, from_value, to_value):
+        self.label_translations[version].append((from_value, to_value))
+    
+    def add_value_translator(self, version, from_value, to_value):
+        self.value_translations[version].append((from_value, to_value))
+
+    def translate_dictionary(self, version, input):
+        return input
