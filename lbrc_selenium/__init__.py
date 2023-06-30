@@ -91,7 +91,7 @@ class ItemsFile():
                 yield item
 
 
-    def get_sample_items(self, filter=None):
+    def get_sample_items(self, filter=None, sample_all=False):
         sampler = Sampler()
 
         with jsonlines.open(self.output_directory / self._export_filename()) as reader:
@@ -101,7 +101,7 @@ class ItemsFile():
                 if filter and not filter(item):
                     continue
 
-                if sampler.is_sampling_pick(n):
+                if sample_all or sampler.is_sampling_pick(n):
                     yield item
                     
                 n += 1
