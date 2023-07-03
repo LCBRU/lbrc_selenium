@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 import zipfile
 import re
@@ -370,20 +371,80 @@ def get_selenium_local_helper(helper_class, download_directory, implicit_wait_ti
     )
 
 
+class Translator:
+    def __init__(self) -> None:
+        self.translations: dict = {}
+    
+    def add_translations(self, version: str, translations: dict):
+
+        self.translations |= translations
+
+    def add_translation(self, version: str, from_value: str, to_value: str):
+        self.translations[from_value] = to_value
+
+
 class VersionTranslator:
     def __init__(self) -> None:
-        self.columns = {}
-        self.label_translations = {}
-        self.value_translations = {}
+        self.columns: dict = {}
+        self.label_translations: dict = {}
+        self.value_translations: dict = {}
 
-    def add_column(self, version, column_name):
-        self.columns[version].append(column_name)
+    def set_columns_for_version(self, ver: str, column_names: set):
+        cv = version.parse(ver)
+        self.columns[cv] = column_names
 
-    def add_label_translator(self, version, from_value, to_value):
-        self.label_translations[version].append((from_value, to_value))
+    def add_column(self, ver: str, column_name: str):
+        cv = version.parse(ver)
+        self.columns[cv].append(column_name)
+
+    def set_label_translators_for_version(self, ver: str, translations: dict):
+        cv = version.parse(ver)
+        self.label_translations[cv] = translations
     
-    def add_value_translator(self, version, from_value, to_value):
-        self.value_translations[version].append((from_value, to_value))
+    def add_label_translator(self, ver: str, from_value: str, to_value: str):
+        cv = version.parse(ver)
+        self.label_translations[cv][from_value] = to_value
+    
+    def set_value_translators_for_version(self, ver: str, translations: dict):
+        cv = version.parse(ver)
+        self.value_translations[cv] = translations
+    
+    def add_value_translator(self, ver: str, from_value: str, to_value: str):
+        cv = version.parse(ver)
+        self.value_translations[cv][from_value] = to_value
+    
+    def translate_dictionary(self, ver: str, input: dict):
+        ct: list = self._get_version(ver, self.columns)
+        lt: dict = self._get_version(ver, self.value_translations)
+        vt: dict = self._get_version(ver, self.value_translations)
 
-    def translate_dictionary(self, version, input):
-        return input
+        result = OrderedDict()
+
+        for k, v in input.items():
+            if lt and k in lt.keys():
+                k = lt[k]
+
+            if ct and k not in ct:
+                continue
+
+            if vt and v in vt.keys():
+                v = lt[v]
+            
+            result[k] = v
+        
+        result = OrderedDict({key: value for key, value in sorted(result.items())})
+
+        print(result)
+
+        return result
+
+    def _get_version(self, ver: str, versions: dict):
+        cv = version.parse(ver)
+        pre_versions = [k for k in versions.keys() if k <= cv]
+
+        if not pre_versions:
+            return None
+        
+        latest_version = max(pre_versions)
+        return versions[latest_version]
+    
