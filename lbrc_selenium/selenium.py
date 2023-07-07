@@ -3,6 +3,7 @@ import os
 import zipfile
 import re
 import smtplib
+import typing
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -18,6 +19,7 @@ from email.mime.text import MIMEText
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from packaging import version
+from dataclasses import dataclass
 
 
 RE_REMOVE_HTML_TAGS = re.compile('<.*?>')
@@ -240,6 +242,9 @@ class SeleniumHelper:
             sleep(self.click_wait_time)
     
     def get_text(self, element):
+        if not element:
+            return None
+
         result = self.normalise_text(element.text)
 
         if len(result) == 0:
@@ -427,15 +432,27 @@ class VersionTranslator:
             if ct and k not in ct:
                 continue
 
-            if vt and v in vt.keys():
+            if isinstance(v, typing.Hashable) and vt and v in vt.keys():
                 v = lt[v]
             
             result[k] = v
         
         result = OrderedDict({key: value for key, value in sorted(result.items())})
 
-        print(result)
+        return result
 
+    def cleanse_headers(self, ver: str, headers: list):
+        ct: list = self._get_version(ver, self.columns)
+
+        if not ct:
+            return headers
+
+        result = []
+
+        for h in headers:
+            if h in ct:
+                result.append(h)
+       
         return result
 
     def _get_version(self, ver: str, versions: dict):
@@ -447,4 +464,157 @@ class VersionTranslator:
         
         latest_version = max(pre_versions)
         return versions[latest_version]
+
+@dataclass(frozen=True, eq=True)
+class Link:
+    href: str
+    name: str
+
+class Scrubber:
+    def __init__(self, helper: SeleniumHelper, version_comparator: VersionTranslator=None) -> None:
+        self.helper = helper
+        self.version_comparator = version_comparator or VersionTranslator()
+
+    def get_details(self):
+        parents = self.helper.get_elements(self.parent_selector)
+
+        if len(parents) > 0:
+            return self._scrape_details(parents[0])
+        else:
+            return None
     
+    def _scrape_details(self, parent):
+        return []
+    
+    def get_value(self, parent, header=''):
+        elements = sorted(self.helper.get_elements(self.value_selector, element=parent), key=lambda x: x.tag_name)
+        parents = self.get_parent_elements(elements, header)
+
+        if len(parents) > 0:
+            values_values = list(set(filter(None, [self.get_element_contents(v) for v in parents])))
+            return '; '.join(str(vv) for vv in values_values)
+        else:
+            return self.get_element_contents(parent)
+    
+    def cleanse(self, value):
+        if value:
+            return value.replace('&nbsp;', ' ').strip()
+
+    def get_element_contents(self, element):
+        if element.tag_name == 'a':
+            href = self.helper.get_href(element)
+            name = self.helper.get_text(element)
+
+            if not href and not name:
+                return None
+
+            return Link(href=self.cleanse(href), name=self.cleanse(name))
+        else:
+            return self.cleanse(self.helper.get_text(element))
+
+    def get_parent_elements(self, elements, header):
+        results = []
+
+        if header == 'Description':
+            for e in elements:
+                print('-'*10)
+                print(e.get_attribute('outerHTML'))
+
+        for e in elements:
+            ancestors = self.helper.get_elements(XpathSelector('.//ancestor-or-self::*'), element=e)
+            ancestors.remove(e)
+            intersection = list(set(ancestors) & set(elements))
+
+            if len(intersection) == 0:
+                results.append(e)
+                break
+
+        print(len(results))
+        return results
+
+class KeyValuePairScrubber(Scrubber):
+    def __init__(self, 
+                 helper: SeleniumHelper,
+                 parent_selector: Selector=None,
+                 pair_selector: Selector=None,
+                 key_selector: Selector=None,
+                 value_selector: Selector=None,
+                 version_comparator: VersionTranslator=None) -> None:
+        super().__init__(helper, version_comparator)
+        
+        self.parent_selector = parent_selector or CssSelector('ul')
+        self.pair_selector = pair_selector or CssSelector('li')
+        self.key_selector = key_selector or CssSelector('strong')
+        self.value_selector = value_selector or CssSelector('span, a')
+
+    def _scrape_details(self, parent):
+        details = {}
+
+        for kvpair in self.helper.get_elements(self.pair_selector, element=parent):
+            title = self.helper.get_element(self.key_selector, element=kvpair, allow_null=True)
+            header = self.cleanse(self.helper.get_text(title))
+
+            if header:
+                details[header] = self.get_value(kvpair)
+
+        return self.version_comparator.translate_dictionary(self.helper.compare_version, details)
+
+
+class ListScrubber(Scrubber):
+    def __init__(self, 
+                 helper: SeleniumHelper,
+                 parent_selector: Selector=None,
+                 value_selector: Selector=None,
+                 version_comparator: VersionTranslator=None) -> None:
+        super().__init__(helper, version_comparator)
+        
+        self.parent_selector = parent_selector or CssSelector('ul')
+        self.value_selector = value_selector or CssSelector('li')
+
+    def _scrape_details(self, parent):
+        details = []
+
+        for value in self.helper.get_elements(self.value_selector, element=parent):
+            details.append(self.get_value(value))
+
+        return sorted(details)
+
+
+class TableScrubber(Scrubber):
+    def __init__(self, 
+                 helper: SeleniumHelper,
+                 parent_selector: Selector=None,
+                 header_selector: Selector=None,
+                 row_selector: Selector=None,
+                 cell_selector: Selector=None,
+                 value_selector: Selector=None,
+                 version_comparator: VersionTranslator=None) -> None:
+        super().__init__(helper, version_comparator)
+        
+        self.parent_selector = parent_selector or CssSelector('table')
+        self.header_selector = header_selector or CssSelector('thead tr th')
+        self.row_selector = row_selector or CssSelector('tbody tr')
+        self.cell_selector = cell_selector or CssSelector('td')
+        self.value_selector = value_selector or CssSelector('span, a')
+
+    def _scrape_details(self, parent):
+        result = []
+
+        headers = [self.helper.get_text(h) for h in self.helper.get_elements(self.header_selector, element=parent)]
+        headers = self.version_comparator.cleanse_headers(self.helper.compare_version, headers)
+
+        for row in self.helper.get_elements(self.row_selector, element=parent):
+            details = {}
+
+            for i, cell in enumerate(self.helper.get_elements(self.cell_selector, element=row)):
+                if i < len(headers):
+                    header = self.cleanse(headers[i])
+                else:
+                    header = str(i)
+
+                if header:
+                    details[header] = self.get_value(cell, header=header)
+
+            result.append(self.version_comparator.translate_dictionary(self.helper.compare_version, details))
+
+        return sorted(result, key=lambda d: str(d[[h for h in filter(None, headers)][0]]))
