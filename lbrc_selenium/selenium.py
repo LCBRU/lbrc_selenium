@@ -309,11 +309,14 @@ class SeleniumHelper:
             self.driver.close()
 
 
-def get_selenium(helper_class=SeleniumHelper):
+def get_selenium(helper_class=SeleniumHelper, base_url=None):
+    if not base_url:
+        base_url=os.environ.get("BASE_URL", "")
+
     args = dict(
         download_directory=os.environ["DOWNLOAD_DIRECTORY"],
         output_directory=os.environ["OUTPUT_DIRECTORY"],
-        base_url=os.environ.get("BASE_URL", ""),
+        base_url=base_url,
         implicit_wait_time=float(os.environ.get("IMPLICIT_WAIT_TIME", 1)),
         click_wait_time=float(os.environ.get("CLICK_WAIT_TIME", 1)),
         download_wait_time=float(os.environ.get("DOWNLOAD_WAIT_TIME", 60)),
