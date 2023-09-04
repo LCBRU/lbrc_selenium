@@ -20,6 +20,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from packaging import version
 from dataclasses import dataclass
+import logging
+import base64
+import tempfile
 
 
 RE_REMOVE_HTML_TAGS = re.compile('<.*?>')
@@ -161,6 +164,57 @@ class SeleniumHelper:
 
         self.output_directory = Path(output_directory) / self.version
         self.output_directory.mkdir(parents=True, exist_ok=True)
+
+    def download_file(self, filename):
+        # list all the completed remote files (waits for at least one)
+        files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
+
+        # get the content of the first file remotely
+        content = self.get_file_content(self.driver, files[0])
+
+        with open(filename, 'wb') as f:
+            f.write(content)
+
+        logging.info("Test test_grid_download_files executed successfully")
+
+    def get_downloaded_files(self, driver):
+        if not driver.current_url.startswith("chrome://downloads"):
+            driver.get("chrome://downloads/")
+
+        return driver.execute_script( \
+            "return  document.querySelector('downloads-manager')  "
+            " .shadowRoot.querySelector('#downloadsList')         "
+            " .items.filter(e => e.state === 'COMPLETE')          "
+            " .map(e => e.filePath || e.file_path || e.fileUrl || e.file_url); ")
+
+    def get_file_content(self, driver, path):
+        try:
+            elem = driver.execute_script( \
+                "var input = window.document.createElement('INPUT'); "
+                "input.setAttribute('type', 'file'); "
+                "input.hidden = true; "
+                "input.onchange = function (e) { e.stopPropagation() }; "
+                "return window.document.documentElement.appendChild(input); " )
+
+            elem._execute('sendKeysToElement', {'value': [ path ], 'text': path})
+
+            result = driver.execute_async_script( \
+                "var input = arguments[0], callback = arguments[1]; "
+                "var reader = new FileReader(); "
+                "reader.onload = function (ev) { callback(reader.result) }; "
+                "reader.onerror = function (ex) { callback(ex.message) }; "
+                "reader.readAsDataURL(input.files[0]); "
+                "input.remove(); "
+                , elem)
+
+            if not result.startswith('data:') :
+                raise Exception("Failed to get file content: %s" % result)
+
+            return base64.b64decode(result[result.find('base64,') + 7:])
+
+        finally:
+            logging.info("get_file_content executed successfully")
+
 
     def unzip_download_directory_contents(self):
         for zp in self._download_directory.iterdir():
