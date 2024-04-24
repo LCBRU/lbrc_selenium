@@ -7,7 +7,6 @@ import typing
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from urllib.parse import urljoin
@@ -395,13 +394,17 @@ def get_selenium(helper_class=SeleniumHelper, base_url=None):
         )
 
 
-def get_selenium_grid_helper(helper_class, download_directory, selenium_host, selenium_port, implicit_wait_time, browser=DesiredCapabilities.CHROME, **kwargs):
-    browser['acceptInsecureCerts'] = True
-    browser['acceptSslCerts'] = True
+def get_selenium_grid_helper(helper_class, download_directory, selenium_host, selenium_port, implicit_wait_time, options = None, **kwargs):
+    if options is None:
+        options = webdriver.ChromeOptions()
+
+    options.add_argument('ignore-certificate-errors')
+    # options['acceptInsecureCerts'] = True
+    # options['acceptSslCerts'] = True
 
     driver = webdriver.Remote(
         command_executor=f'http://{selenium_host}:{selenium_port}/wd/hub',
-        desired_capabilities=browser
+        options=options,
     )
 
     return helper_class(
