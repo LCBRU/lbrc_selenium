@@ -8,24 +8,24 @@ Helper for Selenium testing and downloading.
 
 This library requires the following environment variables.
 
-LBRC_SELENIUM_DOWNLOAD_DIRECTORY
- : Directory into which downloads will be saved
-LBRC_SELENIUM_BASE_URL
- : The base URL for the site being accessed.  This is used to convert between relaltive and absolute URLs
- LBRC_SELENIUM_IMPLICIT_WAIT_TIME
- : Time Selenium will wait for elements to appear.  (default: 1s)
-LBRC_SELENIUM_CLICK_WAIT_TIME
- : Time Selenium waits for a page to respond to a click. (default: 1s)
-LBRC_SELENIUM_DOWNLOAD_WAIT_TIME
- : Time selenium waits for a file to download. (default: 30s)
-LBRC_SELENIUM_PAGE_WAIT_TIME
- : Time selenium waits for a page to load. (default: 5s)
-LBRC_SELENIUM_HOST
- : URL of Selenium grid.  If not supplied, Selenium will run locallay.
-LBRC_SELENIUM_PORT
- : Port for Selenium grid (if required). (default: 4444).
-LBRC_SELENIUM_HEADLESS
- : Spefies is Selenium will run in the background if run locally. (default: False)
+- LBRC_SELENIUM_DOWNLOAD_DIRECTORY
+  - Directory into which downloads will be saved
+- LBRC_SELENIUM_BASE_URL
+  - The base URL for the site being accessed.  This is used to convert between relaltive and absolute URLs
+- LBRC_SELENIUM_IMPLICIT_WAIT_TIME
+  - Time Selenium will wait for elements to appear.  (default: 1s)
+- LBRC_SELENIUM_CLICK_WAIT_TIME
+  - Time Selenium waits for a page to respond to a click. (default: 1s)
+- LBRC_SELENIUM_DOWNLOAD_WAIT_TIME
+  - Time selenium waits for a file to download. (default: 30s)
+- LBRC_SELENIUM_PAGE_WAIT_TIME
+  - Time selenium waits for a page to load. (default: 5s)
+- LBRC_SELENIUM_HOST
+  - URL of Selenium grid.  If not supplied, Selenium will run locallay.
+- LBRC_SELENIUM_PORT
+  - Port for Selenium grid (if required). (default: 4444).
+- LBRC_SELENIUM_HEADLESS
+  - Spefies is Selenium will run in the background if run locally. (default: False)
 
 ### Install
 
