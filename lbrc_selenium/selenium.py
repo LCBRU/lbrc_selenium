@@ -390,6 +390,7 @@ def get_selenium(helper_class=SeleniumHelper, base_url=None):
         return get_selenium_local_helper(
             helper_class=helper_class,
             headless=os.environ.get("SELENIUM_HEADLESS", False),
+            firefox_binary=os.environ.get("FIREFOX_BINARY"),
             **args,
         )
 
@@ -415,7 +416,7 @@ def get_selenium_grid_helper(helper_class, download_directory, selenium_host, se
     )
 
 
-def get_selenium_local_helper(helper_class, download_directory, implicit_wait_time, headless=True, **kwargs):
+def get_selenium_local_helper(helper_class, download_directory, implicit_wait_time, firefox_binary=None, headless=True, **kwargs):
     profile = webdriver.FirefoxProfile()
     profile.set_preference("browser.download.folderList", 2)
     profile.set_preference("browser.download.manager.showWhenStarting", False)
@@ -425,6 +426,9 @@ def get_selenium_local_helper(helper_class, download_directory, implicit_wait_ti
     options = FirefoxOptions()
     if headless:
         options.add_argument("--headless")
+
+    if firefox_binary is not None:
+        options.binary = firefox_binary
 
     driver = webdriver.Firefox(options=options, firefox_profile=profile)
     driver.implicitly_wait(implicit_wait_time)
