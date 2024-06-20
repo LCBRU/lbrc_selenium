@@ -424,13 +424,14 @@ def get_selenium_local_helper(helper_class, download_directory, implicit_wait_ti
     profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/zip")
 
     options = FirefoxOptions()
+    options.profile = profile
     if headless:
         options.add_argument("--headless")
 
     if firefox_binary is not None:
         options.binary = firefox_binary
 
-    driver = webdriver.Firefox(options=options, firefox_profile=profile)
+    driver = webdriver.Firefox(options=options)
     driver.implicitly_wait(implicit_wait_time)
 
     return helper_class(
