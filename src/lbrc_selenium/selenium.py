@@ -594,7 +594,6 @@ class Scrubber:
                 results.append(e)
                 break
 
-        print(len(results))
         return results
 
 class KeyValuePairScrubber(Scrubber):
