@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import shutil
 import math
@@ -66,35 +67,41 @@ class ItemsFile():
     def _export_filename(self):
         return secure_filename(f'{self.filename}.jsonl')
 
+    def export_filepath(self):
+        return self.output_directory / self._export_filename()
+
     def add_item(self, item):
         if item not in self.items:
             self.items.append(item)
 
     def exists(self):
-        return (self.output_directory / self._export_filename()).exists()
+        return (self.export_filepath()).exists()
 
     def save(self):
-        with jsonlines.open(self.output_directory / self._export_filename(), mode='w') as writer:
+        with jsonlines.open(self.export_filepath(), mode='w') as writer:
             if self.sorted:
                 for i in sorted(self.items, key=lambda i: list(i.values())):
                     writer.write(i)
             else:
                 for i in self.items:
-                    writer.write(i)
+                    try:
+                        writer.write(i)
+                    except Exception as e:
+                        print(i)
+                        raise e
 
     def get_items(self, filter=None):
-        with jsonlines.open(self.output_directory / self._export_filename()) as reader:
+        with jsonlines.open(self.export_filepath()) as reader:
             for item in reader:
                 if filter and not filter(item):
                     continue
 
                 yield item
 
-
     def get_sample_items(self, filter=None, sample_all=False):
         sampler = Sampler()
 
-        with jsonlines.open(self.output_directory / self._export_filename()) as reader:
+        with jsonlines.open(self.export_filepath()) as reader:
             n = 0
 
             for item in reader:

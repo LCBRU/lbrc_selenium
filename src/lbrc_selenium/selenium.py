@@ -1,4 +1,6 @@
 from collections import OrderedDict
+import dataclasses
+from itertools import islice
 import os
 import zipfile
 import re
@@ -161,6 +163,7 @@ class SeleniumHelper:
         self.download_directory.mkdir(parents=True, exist_ok=True)
         self._clear_directory(self.download_directory)
 
+        self.global_output_directory = Path(output_directory)
         self.output_directory = Path(output_directory) / self.version
         self.output_directory.mkdir(parents=True, exist_ok=True)
 
@@ -502,21 +505,18 @@ class VersionTranslator:
             
             result[k] = v
         
-        result = OrderedDict({key: value for key, value in sorted(result.items())})
+        result = OrderedDict({key: value for key, value in sorted(result.items(), key=lambda i: str(i[0]))})
 
         return result
 
     def cleanse_headers(self, ver: str, headers: list):
-        ct: list = self._get_version(ver, self.columns)
+        ct: list = self._get_version(ver, self.columns) or headers
 
-        if not ct:
-            return headers
+        result = {}
 
-        result = []
-
-        for h in headers:
+        for i, h in enumerate(headers):
             if h in ct:
-                result.append(h)
+                result[str(i)] = h
        
         return result
 
@@ -534,6 +534,10 @@ class VersionTranslator:
 class Link:
     href: str
     name: str
+
+    def __str__(self):
+        return f"[{self.name}]({self.href})"
+
 
 class Scrubber:
     def __init__(self, helper: SeleniumHelper, version_comparator: VersionTranslator=None) -> None:
@@ -573,17 +577,12 @@ class Scrubber:
             if not href and not name:
                 return None
 
-            return Link(href=self.cleanse(href), name=self.cleanse(name))
+            return str(Link(href=self.cleanse(href), name=self.cleanse(name)))
         else:
             return self.cleanse(self.helper.get_text(element))
 
     def get_parent_elements(self, elements, header):
         results = []
-
-        if header == 'Description':
-            for e in elements:
-                print('-'*10)
-                print(e.get_attribute('outerHTML'))
 
         for e in elements:
             ancestors = self.helper.get_elements(XpathSelector('.//ancestor-or-self::*'), element=e)
@@ -603,7 +602,8 @@ class KeyValuePairScrubber(Scrubber):
                  pair_selector: Selector=None,
                  key_selector: Selector=None,
                  value_selector: Selector=None,
-                 version_comparator: VersionTranslator=None) -> None:
+                 version_comparator: VersionTranslator=None,
+                 ) -> None:
         super().__init__(helper, version_comparator)
         
         self.parent_selector = parent_selector or CssSelector('ul')
@@ -665,20 +665,19 @@ class TableScrubber(Scrubber):
         result = []
 
         headers = [self.helper.get_text(h) for h in self.helper.get_elements(self.header_selector, element=parent)]
+
         headers = self.version_comparator.cleanse_headers(self.helper.compare_version, headers)
 
         for row in self.helper.get_elements(self.row_selector, element=parent):
             details = {}
 
             for i, cell in enumerate(self.helper.get_elements(self.cell_selector, element=row)):
-                if i < len(headers):
-                    header = self.cleanse(headers[i])
-                else:
-                    header = str(i)
+                if str(i) not in headers:
+                    continue
 
-                if header:
-                    details[header] = self.get_value(cell, header=header)
+                header = self.cleanse(headers[str(i)])
+                details[header] = self.get_value(cell, header=header)
 
             result.append(self.version_comparator.translate_dictionary(self.helper.compare_version, details))
 
-        return sorted(result, key=lambda d: str(d[[h for h in filter(None, headers)][0]]))
+        return sorted(result, key=lambda d: [str(v) for v in d.values()])
